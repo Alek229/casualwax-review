@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 60 60">
+  <!-- CasualWax Circuit (draft), one seamless tile: a stepped track with its signal -->
+  <rect width="60" height="60" fill="#0f0e0d"/>
+  <path d="M-4 15 H18 V43 H42 V15 H64" fill="none" stroke="#f5b315" stroke-width="6" stroke-linejoin="miter"/>
+  <path d="M0 53 H60" stroke="#1e44b8" stroke-width="4"/>
+  <circle cx="30" cy="29" r="4" fill="#f3efe6"/>
+  <circle cx="5" cy="31" r="3" fill="#e0451f"/><circle cx="55" cy="31" r="3" fill="#e0451f"/>
+</svg>

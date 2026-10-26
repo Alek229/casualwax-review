@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta name="robots" content="noindex, nofollow">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Studio: every wax on every piece · CasualWax</title>
+<meta name="description" content="Choose a CasualWax piece, try every original wax panel on it, as a product shot and worn, then add it to your cart.">
+<meta name="theme-color" content="#0f0e0d">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 40 40%27%3E%3Ccircle cx=%2720%27 cy=%2720%27 r=%2719%27 fill=%27%23f5b315%27/%3E%3Ccircle cx=%2720%27 cy=%2720%27 r=%2713.5%27 fill=%27%231e44b8%27/%3E%3Ccircle cx=%2720%27 cy=%2720%27 r=%278%27 fill=%27%23efede9%27/%3E%3Ccircle cx=%2720%27 cy=%2720%27 r=%273.6%27 fill=%27%230f0e0d%27/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=TikTok+Sans:wdth,wght@75..150,300..900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css?v=20261025e">
+<script>document.documentElement.classList.add('js')</script>
+</head>
+<body>
+
+<!--
+  CasualWax studio: the product presentation (Shopify: templates/product.json + sections/product-studio.liquid).
+  The wax is a product option; every view of the piece is drawn with that wax by wax-render.js.
+-->
+
+<svg class="defs" aria-hidden="true" focusable="false" width="0" height="0">
+  <defs>
+    <symbol id="mark" viewBox="0 0 40 40">
+      <circle cx="20" cy="20" r="19" fill="#f5b315"/>
+      <circle cx="20" cy="20" r="13.5" fill="#1e44b8"/>
+      <circle cx="20" cy="20" r="8" fill="#f3efe6"/>
+      <circle cx="20" cy="20" r="3.6" fill="#0f0e0d"/>
+      <circle cx="33.4" cy="6.6" r="3.4" fill="#e0451f"/>
+    </symbol>
+  </defs>
+</svg>
+
+<a class="skip" href="#main" data-i18n="skip">Skip to content</a>
+
+<!-- ===================== sections/header.liquid ===================== -->
+<header class="site-header" data-shopify-section="header">
+  <div class="bar">
+    <a class="wordmark" href="index.html" aria-label="CasualWax, home">
+      <svg class="wordmark-mark" aria-hidden="true"><use href="#mark"/></svg>
+      <span class="wordmark-type">CasualWax</span>
+    </a>
+    <nav class="nav-main" aria-label="Main">
+      <a class="link" href="index.html#shop" data-i18n="nav.shop">Shop</a>
+      <a class="link" href="studio.html" aria-current="page" data-i18n="nav.studio">Studio</a>
+      <a class="link" href="journal.html" data-i18n="nav.journal">Journal</a>
+      <a class="link" href="index.html#prints" data-i18n="nav.prints">The prints</a>
+      <a class="link" href="index.html#made" data-i18n="nav.about">About</a>
+    </nav>
+    <div class="bar-tools">
+      <div class="prefs">
+        <button class="pref-lang" type="button" data-action="toggle-lang" aria-label="Passer en français"><span data-i18n="lang.other">FR</span></button>
+        <label class="sr-only" for="currency-head" data-i18n="currency.label">Currency</label>
+        <select id="currency-head" class="pref-currency" data-currency-select>
+          <option value="EUR">EUR €</option><option value="GBP">GBP £</option><option value="CAD">CAD $</option><option value="USD">USD $</option>
+        </select>
+      </div>
+      <a class="cart-link" href="#cart" data-cart-link><span class="cart-word" data-i18n="cart">Cart</span> <span class="cart-count" data-cart-count>0</span></a>
+      <button class="menu-button" type="button" aria-expanded="false" aria-controls="menu" data-action="menu"><span data-i18n="menu">Menu</span></button>
+    </div>
+  </div>
+  <div class="menu" id="menu" hidden>
+    <nav aria-label="Shop" class="menu-links">
+      <a href="index.html#shop" data-i18n="col.tees">T-shirts</a>
+      <a href="index.html#shop" data-i18n="col.hoodies">Hoodies</a>
+      <a href="index.html#shop" data-i18n="col.bags">Bags</a>
+      <a href="index.html#shop" data-i18n="col.sneakers">Sneakers</a>
+      <a href="studio.html" aria-current="page" data-i18n="nav.studio">Studio</a>
+      <a href="journal.html" data-i18n="nav.journal">Journal</a>
+      <a href="index.html#prints" data-i18n="nav.prints">The prints</a>
+      <a href="index.html#made" data-i18n="nav.about">About</a>
+    </nav>
+    <div class="menu-prefs">
+      <div class="seg" role="group" aria-label="Language">
+        <button type="button" data-set-lang="en" aria-pressed="true">English</button>
+        <button type="button" data-set-lang="fr" aria-pressed="false">Français</button>
+      </div>
+      <label class="menu-currency"><span data-i18n="currency.label">Currency</span>
+        <select data-currency-select>
+          <option value="EUR">EUR €</option><option value="GBP">GBP £</option><option value="CAD">CAD $</option><option value="USD">USD $</option>
+        </select>
+      </label>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+<!-- ===================== sections/product-studio.liquid ===================== -->
+<section class="studio" data-shopify-section="product-studio" data-studio aria-labelledby="studio-name">
+  <div class="studio-pieces" role="group" aria-label="Pieces" data-i18n-label="studio.pieces" data-studio-pieces></div>
+
+  <div class="studio-grid">
+    <div class="studio-gallery">
+      <figure class="stage studio-stage" data-studio-stage>
+        <img alt="" width="800" height="1000" decoding="async" data-studio-img>
+        <span class="stage-tag" data-i18n="wax.preview">Preview</span>
+      </figure>
+      <div class="studio-views" role="group" aria-label="Views" data-i18n-label="studio.views" data-studio-views hidden></div>
+    </div>
+
+    <div class="studio-panel" data-product="hoodie" data-wax="orbit" data-studio-panel>
+      <h1 class="studio-name" id="studio-name"><span data-studio-piece data-i18n="p.hoodie">Hoodie</span></h1>
+      <p class="studio-wax-name"><span data-i18n="studio.panel">Wax panel:</span> <strong data-print-name>Orbit</strong></p>
+      <p class="studio-price"><span data-price="hoodie" data-studio-price>€95</span></p>
+      <p class="product-line" data-studio-line data-i18n="p.hoodie.l">Unisex. 100% West African cotton.</p>
+
+      <div class="studio-wax" role="radiogroup" aria-label="Wax panel" data-i18n-label="wax.choose" data-studio-wax></div>
+
+      <details class="studio-adjust" data-studio-adjust>
+        <summary data-i18n="studio.adjust">Adjust the print</summary>
+        <div class="studio-sliders">
+          <label><span data-i18n="studio.scale">Size</span><input type="range" min="0.25" max="3" step="0.05" value="1" data-adjust="scale"><output data-adjust-out="scale">×1.00</output></label>
+          <label><span data-i18n="studio.rotate">Rotation</span><input type="range" min="-180" max="180" step="1" value="0" data-adjust="rotate"><output data-adjust-out="rotate">0°</output></label>
+          <label><span data-i18n="studio.x">Left / right</span><input type="range" min="-300" max="300" step="1" value="0" data-adjust="x"><output data-adjust-out="x">0</output></label>
+          <label><span data-i18n="studio.y">Up / down</span><input type="range" min="-300" max="300" step="1" value="0" data-adjust="y"><output data-adjust-out="y">0</output></label>
+          <label><span data-i18n="studio.shade">Folds</span><input type="range" min="0" max="1.5" step="0.05" value="1" data-adjust="shade"><output data-adjust-out="shade">100%</output></label>
+        </div>
+        <div class="studio-adjust-actions">
+          <button class="link" type="button" data-adjust-reset data-i18n="studio.reset">Reset</button>
+          <button class="link" type="button" data-adjust-download data-i18n="studio.download">Download the image</button>
+        </div>
+        <p class="image-note" data-i18n="studio.adjustNote">Preview only: it does not change the piece you order.</p>
+      </details>
+
+      <form class="quick-add" data-quick-add>
+        <label class="sr-only" for="size-studio" data-i18n="size">Size</label>
+        <select id="size-studio" name="size" data-studio-size></select>
+        <button class="button" type="submit" data-i18n="add">Add to cart</button>
+      </form>
+
+      <p class="studio-lede" data-i18n="studio.lede">The solid cotton stays. The panel changes. Every wax is drawn by CasualWax.</p>
+      <p class="image-note" data-i18n="studio.notice">AI-generated concepts. “Preview” marks a wax drawn onto the picture; colours and patch placement are provisional.</p>
+    </div>
+  </div>
+
+  <div class="studio-compare">
+    <h2 class="head" data-i18n="studio.compare">Every wax, side by side.</h2>
+    <ul class="studio-compare-grid" data-studio-compare></ul>
+  </div>
+</section>
+
+</main>
+
+<!-- ===================== sections/footer.liquid ===================== -->
+<footer class="site-footer" data-shopify-section="footer">
+  <p class="footer-name" aria-hidden="true">CasualWax</p>
+  <div class="footer-row">
+    <div class="footer-places">
+      <h2 class="footer-h" data-i18n="footer.ships">We ship to</h2>
+      <ul>
+        <li><a href="#shipping" data-i18n="c.fr">France</a></li>
+        <li><a href="#shipping" data-i18n="c.uk">United Kingdom</a></li>
+        <li><a href="#shipping" data-i18n="c.ca">Canada</a></li>
+        <li><a href="#shipping" data-i18n="c.us">United States</a></li>
+      </ul>
+      <h2 class="footer-h footer-h--follow" data-i18n="footer.follow">Follow us</h2>
+      <ul class="social">
+        <li><a class="social-link" href="#" data-social="instagram" aria-label="CasualWax on Instagram" data-i18n-label="social.ig"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="5.2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17.4" cy="6.6" r="1.3" fill="currentColor"/></svg></a></li>
+        <li><a class="social-link" href="#" data-social="tiktok" aria-label="CasualWax on TikTok" data-i18n-label="social.tt"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M16.6 2.5c.3 2.3 1.7 3.9 3.9 4.1v3.2c-1.4.1-2.8-.3-3.9-1.1v6.6c0 3.4-2.5 5.9-5.8 5.9-3.1 0-5.5-2.4-5.5-5.5 0-3.4 2.9-6 6.5-5.6v3.3c-.4-.1-.8-.2-1.2-.1-1.4.1-2.4 1.1-2.3 2.5.1 1.3 1.1 2.2 2.4 2.2 1.4 0 2.4-1.1 2.4-2.6V2.5h3.5z"/></svg></a></li>
+      </ul>
+    </div>
+    <nav class="footer-links" aria-label="Footer">
+      <div>
+        <h2 class="footer-h" data-i18n="nav.shop">Shop</h2>
+        <ul><li><a class="link" href="index.html#shop" data-i18n="col.tees">T-shirts</a></li><li><a class="link" href="index.html#shop" data-i18n="col.hoodies">Hoodies</a></li><li><a class="link" href="index.html#shop" data-i18n="col.bags">Bags</a></li><li><a class="link" href="index.html#shop" data-i18n="col.sneakers">Sneakers</a></li><li><a class="link" href="studio.html" data-i18n="nav.studio">Studio</a></li><li><a class="link" href="journal.html" data-i18n="nav.journal">Journal</a></li></ul>
+      </div>
+      <div>
+        <h2 class="footer-h" data-i18n="footer.help">Help</h2>
+        <ul><li><a class="link" href="#shipping" data-i18n="trust.ship">Shipping</a></li><li><a class="link" href="#returns" data-i18n="trust.ret">Returns</a></li><li><a class="link" href="#size-guide" data-i18n="footer.size">Size guide</a></li><li><a class="link" href="#contact" data-i18n="footer.contact">Contact</a></li></ul>
+      </div>
+      <div class="footer-prefs">
+        <h2 class="footer-h" data-i18n="footer.prefs">Language and currency</h2>
+        <div class="seg" role="group" aria-label="Language">
+          <button type="button" data-set-lang="en" aria-pressed="true">English</button>
+          <button type="button" data-set-lang="fr" aria-pressed="false">Français</button>
+        </div>
+        <label class="sr-only" for="currency-foot" data-i18n="currency.label">Currency</label>
+        <select id="currency-foot" data-currency-select>
+          <option value="EUR">EUR €</option><option value="GBP">GBP £</option><option value="CAD">CAD $</option><option value="USD">USD $</option>
+        </select>
+      </div>
+    </nav>
+  </div>
+  <div class="footer-legal">
+    <p>© 2026 CasualWax. <span data-i18n="footer.draft">Draft wordmark.</span></p>
+    <a class="link" href="#main" data-i18n="footer.top">Back to top</a>
+  </div>
+</footer>
+
+<div class="toast" role="status" aria-live="polite" data-toast hidden>
+  <p data-toast-text></p>
+  <a href="#cart" data-i18n="toast.view">View cart</a>
+</div>
+
+<script src="wax-render.js?v=20261025" defer></script>
+<script src="site-data.js?v=20261025-215007" defer></script>
+<script src="main.js?v=20261025e" defer></script>
+</body>
+</html>

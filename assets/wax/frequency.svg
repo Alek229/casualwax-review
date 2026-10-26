@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="44" viewBox="0 0 64 44">
+  <!-- CasualWax Frequency, one seamless tile -->
+  <rect width="64" height="44" fill="#0f0e0d"/>
+  <path d="M-16 24 L0 8 L16 24 L32 8 L48 24 L64 8 L80 24" fill="none" stroke="#e0451f" stroke-width="8" stroke-linejoin="miter"/>
+  <path d="M-16 38 L0 30 L16 38 L32 30 L48 38 L64 30 L80 38" fill="none" stroke="#f5b315" stroke-width="3"/>
+  <circle cx="0" cy="22" r="3" fill="#f3efe6"/><circle cx="32" cy="22" r="3" fill="#f3efe6"/><circle cx="64" cy="22" r="3" fill="#f3efe6"/>
+</svg>
