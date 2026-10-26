@@ -366,7 +366,7 @@
   const hero = $('[data-hero]');
   if (hero && WAX.length && PRODUCTS.length) {
     const fig = $('[data-hero-stage]', hero);
-    const img = $('[data-hero-img]', hero);
+    let img = $('[data-hero-img]', hero);
     const band = $('[data-hero-band]', hero);
     const waxBox = $('[data-hero-wax]', hero);
     const pieceBox = $('[data-hero-pieces]', hero);
@@ -428,19 +428,34 @@
       const on = b.dataset[attr] === id; b.setAttribute('aria-checked', String(on)); b.tabIndex = on ? 0 : -1;
     });
 
+    // The next picture is loaded and decoded out of sight, then fades in over the current one,
+    // so the stage never shows a half-loaded or empty frame.
     let req = 0;
     async function dressPiece(instant) {
       const r = ++req; const wax = waxOf(H.wax); const animate = !reduced && !instant;
-      fig.classList.toggle('is-switching', animate); fig.setAttribute('aria-busy', 'true');
+      fig.setAttribute('aria-busy', 'true');
       try {
-        const [s] = await Promise.all([pictureFor(H.piece, wax, img.sizes), settle(animate)]);
+        const s = await pictureFor(H.piece, wax, img.sizes);
         if (r !== req) return;
-        if (s.srcset) img.srcset = s.srcset; else img.removeAttribute('srcset');
-        img.src = s.src; img.dataset.product = H.piece; img.dataset.imagePrint = wax.id;
-        img.toggleAttribute('data-preview', s.preview);
+        const next = img.cloneNode();
+        if (s.srcset) next.srcset = s.srcset; else next.removeAttribute('srcset');
+        next.src = s.src; next.dataset.product = H.piece; next.dataset.imagePrint = wax.id;
+        next.toggleAttribute('data-preview', s.preview);
+        await next.decode().catch(() => {});
+        if (r !== req) return;
+        const old = img; img = next;
+        $$('[data-hero-img]', fig).forEach((i) => { if (i !== old) i.remove(); });   // a fade cut short
+        if (animate) {
+          next.classList.add('is-entering');
+          old.after(next);
+          void next.offsetWidth;
+          next.classList.remove('is-entering');
+          next.addEventListener('transitionend', () => old.remove(), { once: true });
+          setTimeout(() => old.remove(), 800);
+        } else old.replaceWith(next);
         applyImageAlts();
       } catch { /* keep the current picture */ }
-      if (r === req) { caption(); fig.classList.remove('is-switching'); fig.removeAttribute('aria-busy'); }
+      if (r === req) { caption(); fig.removeAttribute('aria-busy'); }
     }
     // The choice is marked at once; the name, price and link change with the picture, so they never disagree.
     function marks() { check(waxBox, 'heroWax', H.wax); check(pieceBox, 'heroPiece', H.piece); }
@@ -463,9 +478,10 @@
         sew(wax, tn, !reduced && !instant);
       } catch { /* the band keeps the last print */ }
     }
-    function setHeroPiece(id, instant) { if (id === H.piece) return; H.piece = id; marks(); dressPiece(instant); align(); }
+    function setHeroPiece(id, instant) { if (id === H.piece) return; H.piece = id; marks(); dressPiece(instant); }
 
-    // The band runs at the height of the piece's own panel, as if the panel carried on across the field.
+    // The band runs at the height of the pieces' sewn panels (their average), as if the panel carried
+    // on across the field. It is set once and stays put while the pieces change.
     let panelAt = 0.4;
     function place() {
       const want = fig.offsetTop + fig.offsetHeight * panelAt - band.offsetHeight / 2;
@@ -475,12 +491,11 @@
       band.style.translate = `0 ${Math.round(top - band.offsetTop)}px`;
     }
     function align() {
-      const id = H.piece;
-      prepared(modelOf(id)).then((p) => {
-        if (id !== H.piece || !p.found) return;
-        panelAt = (p.box.y0 + p.box.y1) / 2 / p.h;
+      Promise.all(PRODUCTS.map((p) => prepared(modelOf(p.id)).catch(() => null))).then((all) => {
+        const at = all.filter((p) => p && p.found).map((p) => (p.box.y0 + p.box.y1) / 2 / p.h);
+        if (at.length) panelAt = at.reduce((a, b) => a + b) / at.length;
         place();
-      }).catch(() => {});
+      });
     }
 
     // It plays by itself (a new piece every few seconds, a new wax after each round) until the
