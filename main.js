@@ -498,6 +498,42 @@
       });
     }
 
+    // The title's last word is crossed out with a strip of the current wax, and the next word takes
+    // its place: style, history, link, technology... Screen readers get the plain title.
+    const title = $('#hero-title');
+    const wordBox = $('[data-hero-word]', hero);
+    wordBox.removeAttribute('data-i18n'); wordBox.setAttribute('aria-hidden', 'true');
+    const words = () => (t('hero.words') || '').split(',').map((w) => w.trim()).filter(Boolean);
+    let wi = 0; let wordTimer = null;
+    function wordEl(w) {
+      const run = document.createElement('span'); run.className = 'hero-word-run';
+      const text = document.createElement('span'); text.className = 'hero-word-text'; text.textContent = w;
+      const strike = document.createElement('span'); strike.className = 'hero-word-strike';
+      text.append(strike); run.append(text, '.');
+      return run;
+    }
+    function resetWord() {
+      const w = t('hero.b').replace(/\.$/, '');
+      title.setAttribute('aria-label', `${t('hero.a')} ${t('hero.b')}`);
+      wi = Math.max(0, words().indexOf(w));
+      wordBox.replaceChildren(wordEl(w));
+    }
+    function nextWord() {
+      const list = words(); const cur = wordBox.lastElementChild;
+      if (list.length < 2 || !cur) return;
+      wi = (wi + 1) % list.length;
+      cur.style.setProperty('--tile', `url("${waxOf(H.wax).tile}")`);
+      cur.classList.add('is-struck');
+      setTimeout(() => {
+        if (cur.parentNode !== wordBox) return;   // the language changed meanwhile
+        const next = wordEl(list[wi]); next.classList.add('is-coming');
+        wordBox.append(next); void next.offsetWidth;
+        cur.classList.add('is-going'); next.classList.remove('is-coming');
+        setTimeout(() => cur.remove(), 600);
+      }, 1000);
+    }
+    resetWord();
+
     // It plays by itself (a new piece every few seconds, a new wax after each round) until the
     // visitor picks something; it rests while hovered, focused, off screen or in a hidden tab.
     let timer = null; let held = false; let seen = true; let round = 0; let taken = false;
@@ -506,7 +542,10 @@
       if (n === 0 && ++round) { const w = WAX[(WAX.findIndex((x) => x.id === H.wax) + 1) % WAX.length]; H.piece = ids[0]; setHeroWax(w.id); }
       else setHeroPiece(ids[n]);
     };
-    const run = () => { const go = !reduced && !taken && !held && seen && !document.hidden; if (go && !timer) timer = setInterval(tick, 3400); if (!go && timer) { clearInterval(timer); timer = null; } };
+    const run = () => { const go = !reduced && !taken && !held && seen && !document.hidden; if (go && !timer) timer = setInterval(tick, 3400); if (!go && timer) { clearInterval(timer); timer = null; }
+      // the words keep passing after the visitor takes over; they rest only off screen
+      const say = !reduced && seen && !document.hidden;
+      if (say && !wordTimer) wordTimer = setInterval(nextWord, 3200); if (!say && wordTimer) { clearInterval(wordTimer); wordTimer = null; } };
     const take = () => { taken = true; run(); };
     fig.addEventListener('pointerenter', () => { held = true; run(); });
     fig.addEventListener('pointerleave', () => { held = false; run(); });
@@ -564,7 +603,7 @@
     align();
     addEventListener('resize', () => { place(); tone(waxOf(H.wax)).then((tn) => sew(waxOf(H.wax), tn, false)); });
     run();
-    document.addEventListener('click', (e) => { if (e.target.closest('[data-set-lang], [data-action="toggle-lang"]')) label(); });
+    document.addEventListener('click', (e) => { if (e.target.closest('[data-set-lang], [data-action="toggle-lang"]')) { label(); resetWord(); } });
   }
 
   // Sideways scrollers fade their right edge until the end is reached.
