@@ -142,13 +142,13 @@ select { appearance: none; -webkit-appearance: none; background: var(--surface) 
 .hero-half--b { grid-row: 3; justify-self: end; text-align: right; }
 /* the last word: a saffron marker swipe crosses it out, then the next word rises into its place */
 .hero-word { display: inline-grid; justify-items: end; }
-.hero-word-run { grid-area: 1 / 1; transition: opacity 320ms var(--ease-out), translate 560ms var(--ease-out); }
+.hero-word-run { grid-area: 1 / 1; transition: opacity 240ms var(--ease-out), translate 420ms var(--ease-out); }
 .hero-word-text { position: relative; }
 .hero-word-strike { position: absolute; left: -0.08em; right: -0.08em; top: 22%; width: calc(100% + 0.16em); height: 0.5em; overflow: visible; pointer-events: none; }
 /* stroke width in the drawing's units: 20 units are 0.5em tall, so 5.2 is about 0.13em */
 .hero-word-strike path { fill: none; stroke: var(--accent); stroke-width: 5.2; stroke-linecap: round; stroke-linejoin: round;
   filter: url(#cw-marker); stroke-dasharray: 1.02; stroke-dashoffset: 1.02; }
-.hero-word-run.is-struck .hero-word-strike path { stroke-dashoffset: 0; transition: stroke-dashoffset 440ms cubic-bezier(0.6, 0, 0.3, 1); }
+.hero-word-run.is-struck .hero-word-strike path { stroke-dashoffset: 0; transition: stroke-dashoffset 300ms cubic-bezier(0.6, 0, 0.3, 1); }
 .hero-word-run.is-coming { opacity: 0; translate: 0 0.35em; transition: none; }
 .hero-word-run.is-going { opacity: 0; translate: 0 -0.35em; }
 
