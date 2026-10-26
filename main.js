@@ -532,8 +532,8 @@
         const next = wordEl(list[wi]); next.classList.add('is-coming');
         wordBox.append(next); void next.offsetWidth;
         cur.classList.add('is-going'); next.classList.remove('is-coming');
-        setTimeout(() => cur.remove(), 450);
-      }, 620);
+        setTimeout(() => cur.remove(), 360);
+      }, 420);
     }
     resetWord();
 
@@ -548,7 +548,7 @@
     const run = () => { const go = !reduced && !taken && !held && seen && !document.hidden; if (go && !timer) timer = setInterval(tick, 3400); if (!go && timer) { clearInterval(timer); timer = null; }
       // the words keep passing after the visitor takes over; they rest only off screen
       const say = !reduced && seen && !document.hidden;
-      if (say && !wordTimer) wordTimer = setInterval(nextWord, 2000); if (!say && wordTimer) { clearInterval(wordTimer); wordTimer = null; } };
+      if (say && !wordTimer) wordTimer = setInterval(nextWord, 1400); if (!say && wordTimer) { clearInterval(wordTimer); wordTimer = null; } };
     const take = () => { taken = true; run(); };
     fig.addEventListener('pointerenter', () => { held = true; run(); });
     fig.addEventListener('pointerleave', () => { held = false; run(); });
