@@ -498,18 +498,22 @@
       });
     }
 
-    // The title's last word is crossed out with a strip of the current wax, and the next word takes
-    // its place: style, history, link, technology... Screen readers get the plain title.
+    // The title's last word is crossed out with a marker swipe, there and back like a tag going over
+    // a wall, and the next word takes its place: style, history, link, technology... Screen readers
+    // get the plain title.
     const title = $('#hero-title');
     const wordBox = $('[data-hero-word]', hero);
     wordBox.removeAttribute('data-i18n'); wordBox.setAttribute('aria-hidden', 'true');
     const words = () => (t('hero.words') || '').split(',').map((w) => w.trim()).filter(Boolean);
     let wi = 0; let wordTimer = null;
+    // the marker's rough edge: one filter for every stroke
+    hero.insertAdjacentHTML('beforeend', '<svg width="0" height="0" aria-hidden="true" style="position:absolute"><filter id="cw-marker" x="-5%" y="-40%" width="110%" height="180%"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="7"/><feDisplacementMap in="SourceGraphic" scale="2.2" xChannelSelector="R" yChannelSelector="G"/></filter></svg>');
+    const SWIPE = 'M1.5 12.5 C 22 11, 55 9.5, 98.5 5.5 C 72 9.5, 40 13, 5 17';
     function wordEl(w) {
       const run = document.createElement('span'); run.className = 'hero-word-run';
       const text = document.createElement('span'); text.className = 'hero-word-text'; text.textContent = w;
-      const strike = document.createElement('span'); strike.className = 'hero-word-strike';
-      text.append(strike); run.append(text, '.');
+      text.insertAdjacentHTML('beforeend', `<svg class="hero-word-strike" viewBox="0 0 100 20" preserveAspectRatio="none" aria-hidden="true"><path d="${SWIPE}" pathLength="1"/></svg>`);
+      run.append(text, '.');
       return run;
     }
     function resetWord() {
@@ -522,7 +526,6 @@
       const list = words(); const cur = wordBox.lastElementChild;
       if (list.length < 2 || !cur) return;
       wi = (wi + 1) % list.length;
-      cur.style.setProperty('--tile', `url("${waxOf(H.wax).tile}")`);
       cur.classList.add('is-struck');
       setTimeout(() => {
         if (cur.parentNode !== wordBox) return;   // the language changed meanwhile
