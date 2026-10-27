@@ -502,6 +502,8 @@ html:not(.js) .hero-pick { display: none; }
 .band-track span { padding-inline: 0.28em; }
 .band-track i { width: 0.24em; height: 0.24em; border-radius: 50%; background: currentColor; flex: none; }
 .trust-body { display: grid; gap: 2rem; padding: 2.5rem var(--margin) 0; }
+/* narrower than the other heads, so the title holds two lines on a phone (down to 360px wide) */
+.trust-body .head { font-stretch: 112%; }
 .trust-facts { display: grid; gap: 1.5rem; margin: 0; }
 .trust-facts dt { font-weight: 700; font-size: var(--step-body); }
 .trust-facts dd { margin: 0.25rem 0 0; max-width: 40ch; }
