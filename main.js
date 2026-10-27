@@ -59,9 +59,11 @@
     lang: T[store.get('lang')] ? store.get('lang') : guess.lang,
     cur: CURRENCIES.includes(store.get('cur')) ? store.get('cur') : CURRENCIES.includes(guess.cur) ? guess.cur : CURRENCIES[0],
     print: WAX.some((w) => w.id === D.settings.defaultWax) ? D.settings.defaultWax : WAX[0].id,
-    cart: 0,
   };
   const t = (k) => (T[state.lang][k] ?? T.en[k] ?? '');
+  // fill {name} slots in a text: tf('cart.line', { wax: 'Orbit', size: 'M' })
+  const tf = (k, vars) => t(k).replace(/\{(\w+)\}/g, (m, v) => (v in vars ? vars[v] : m));
+  const onLocale = [];   // pages drawn by script redraw themselves after a language or currency change
 
   function applyImageAlts() {
     $$('img[data-image-print]').forEach((img) => {
@@ -89,7 +91,9 @@
     const fmt = new Intl.NumberFormat(LOCALE[state.cur][state.lang], { style: 'currency', currency: state.cur, maximumFractionDigits: 0, minimumFractionDigits: 0 });
     $$('[data-price]').forEach((el) => { const p = PRICES[el.dataset.price]; if (p) el.textContent = fmt.format(p[state.cur]); });
     $$('[data-currency-select]').forEach((s) => { s.value = state.cur; });
+    onLocale.forEach((f) => f());
   }
+  const money = (n) => new Intl.NumberFormat(LOCALE[state.cur][state.lang], { style: 'currency', currency: state.cur, maximumFractionDigits: 0, minimumFractionDigits: 0 }).format(n);
   function setLang(l) { state.lang = l; store.set('lang', l); applyLang(); }
 
   document.addEventListener('click', (e) => {
@@ -154,7 +158,7 @@
         img.dataset.product = p.id; img.dataset.imagePrint = '';
         $$('[data-i18n^="p."]', card).forEach((el) => { el.dataset.i18n = el.dataset.i18n.replace(/^p\.[^.]+/, 'p.' + p.id); });
         $('[data-price]', card).dataset.price = p.id;
-        $('[data-studio-link]', card).href = `studio.html?piece=${p.id}`;
+        $('[data-product-link]', card).href = productHref(p.id);
       }
       const select = $('select', card);
       select.id = 'size-' + p.id;
@@ -238,9 +242,10 @@
     linkStudio(card);
   }
 
-  // The card opens the studio on its piece, in the wax it is wearing.
+  // The card opens its product page, in the wax it is wearing.
+  const productHref = (piece, wax) => `product.html?piece=${piece}${wax ? '&wax=' + wax : ''}`;
   function linkStudio(card) {
-    $$('[data-studio-link]', card).forEach((a) => { a.href = `studio.html?piece=${card.dataset.product}&wax=${card.dataset.wax}`; });
+    $$('[data-product-link]', card).forEach((a) => { a.href = productHref(card.dataset.product, card.dataset.wax); });
   }
 
   // The swatch answers at once; the picture blurs while the next one loads, then sharpens into it.
@@ -348,7 +353,7 @@
     const pic = $('[data-product-image]', stage);
     const picLink = document.createElement('a');
     picLink.className = 'stage-link';
-    picLink.dataset.studioLink = '';
+    picLink.dataset.productLink = '';
     picLink.tabIndex = -1;                       // the product name carries the same link for keyboards
     picLink.setAttribute('aria-hidden', 'true');
     pic.replaceWith(picLink);
@@ -637,7 +642,34 @@
   $$('[data-set-print]', sw || document).forEach((b) => { b.tabIndex = b.getAttribute('aria-checked') === 'true' ? 0 : -1; });
   if (sw) new MutationObserver(() => $$('[data-set-print]', sw).forEach((b) => { b.tabIndex = b.getAttribute('aria-checked') === 'true' ? 0 : -1; })).observe(sw, { subtree: true, attributes: true, attributeFilter: ['aria-checked'] });
 
-  /* ---------- quick add (Shopify: POST /cart/add.js with the variant id) ---------- */
+  /* ---------- cart (Shopify: /cart/add.js, /cart/change.js and the cart template).
+     Here it is kept in this browser: one line per piece, wax and size. A one-size piece has size ''. ---------- */
+  const readCart = () => {
+    try {
+      const c = JSON.parse(store.get('cart') || '[]');
+      return Array.isArray(c) ? c.filter((l) => PRICES[l.piece] && waxOf(l.wax) && l.qty > 0).map((l) => ({ ...l, qty: Math.min(99, Math.floor(l.qty)) })) : [];
+    } catch { return []; }
+  };
+  let cart = readCart();
+  const cartCount = () => cart.reduce((n, l) => n + l.qty, 0);
+  const cartTotal = () => cart.reduce((n, l) => n + PRICES[l.piece][state.cur] * l.qty, 0);
+  function showCount(bump) {
+    $$('[data-cart-count]').forEach((c) => {
+      c.textContent = cartCount();
+      if (bump && !reduced) { c.classList.remove('is-bump'); void c.offsetWidth; c.classList.add('is-bump'); }
+    });
+  }
+  const cartChanged = [];
+  function saveCart(bump) { store.set('cart', JSON.stringify(cart)); showCount(bump); cartChanged.forEach((f) => f()); }
+  function addToCart(piece, wax, size) {
+    const line = cart.find((l) => l.piece === piece && l.wax === wax && l.size === size);
+    if (line) line.qty = Math.min(99, line.qty + 1); else cart.push({ piece, wax, size, qty: 1 });
+    saveCart(true);
+  }
+  // another tab changed the cart
+  addEventListener('storage', (e) => { if (e.key === 'cw.cart') { cart = readCart(); showCount(); cartChanged.forEach((f) => f()); } });
+  showCount();
+
   const toast = $('[data-toast]'); let toastTimer;
   // leaves faster than it arrived
   const hideToast = () => {
@@ -645,18 +677,23 @@
     toast.classList.add('is-leaving');
     toastTimer = setTimeout(() => { toast.hidden = true; toast.classList.remove('is-leaving'); }, 180);
   };
+  function added(piece, wax, size, btn) {
+    addToCart(piece, wax, size);
+    if (btn) {
+      btn.textContent = t('added'); btn.classList.add('is-added');
+      setTimeout(() => { btn.textContent = t('add'); btn.classList.remove('is-added'); }, 1600);
+    }
+    if (!toast) return;
+    $('[data-toast-text]', toast).textContent = `${t('toast.added')} ${t('p.' + piece)}, ${PRINTS[wax]}${size ? ', ' + size : ''}`;
+    toast.classList.remove('is-leaving'); toast.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(hideToast, 4000);
+  }
+  const hasSizes = (piece) => !!(PRODUCTS.find((p) => p.id === piece) || {}).sizes;
   $$('[data-quick-add]').forEach((form) => form.addEventListener('submit', (e) => {
     e.preventDefault();
     const card = form.closest('[data-product]');
-    const name = `${t('p.' + card.dataset.product)}, ${PRINTS[card.dataset.wax]}`;
-    const size = form.size.value;
-    state.cart += 1;
-    $$('[data-cart-count]').forEach((c) => { c.textContent = state.cart; c.classList.remove('is-bump'); void c.offsetWidth; c.classList.add('is-bump'); });
-    const btn = $('.button', form); btn.textContent = t('added'); btn.classList.add('is-added');
-    setTimeout(() => { btn.textContent = t('add'); btn.classList.remove('is-added'); }, 1600);
-    $('[data-toast-text]', toast).textContent = `${t('toast.added')} ${name}, ${size}`;
-    toast.classList.remove('is-leaving'); toast.hidden = false;
-    clearTimeout(toastTimer); toastTimer = setTimeout(hideToast, 4000);
+    const piece = card.dataset.product;
+    added(piece, card.dataset.wax, hasSizes(piece) ? form.size.value : '', $('.button', form));
   }));
 
   /* ---------- newsletter (Shopify: customer form) ---------- */
@@ -678,6 +715,12 @@
     ['.trust-body', '.head, .trust-facts > div'],
     ['.signup', '.signup-pic, .signup-title, .signup-body p, .signup-form'],
     ['.site-footer', '.footer-name, .footer-places li, .footer-links > div'],
+    ['.shop-head', '.shop-title, .shop-lede'],
+    ['.about', '.about-title, .about-lede'],
+    ['.about-wax', '.head, .about-wax-text p, .about-wax-pic'],
+    ['.help', '.head, .help-lede, .help-nav'],
+    ['.help-part', '.head, .help-body > *'],
+    ['.pdp-more', '.head'],
   ];
   // The hero picture is not part of the entrance: it is the first thing to see, so it is there from the first paint.
   // The sentence rises first, then the words beside the piece, then the picker, about 60ms apart.
@@ -964,6 +1007,47 @@
     fadeEdge(piecesEl);
   }
 
+  /* ---------- search engines: title, description, canonical, language versions, shared previews and
+     structured data (Shopify: the meta-tags snippet in theme.liquid, JSON-LD in each template, hreflang from Markets).
+     The review copy is kept out of search engines by the deploy build; these tags are for the live shop. ---------- */
+  const SITE = (D.settings.siteUrl ? D.settings.siteUrl.replace(/\/$/, '') + '/' : new URL('.', location.href).href);
+  const abs = (path) => new URL(path, SITE).href;
+  const headTag = (tag, key, attr, val) => {
+    let e = document.head.querySelector(`${tag}[${key}="${attr}"]`);
+    if (!e) { e = document.createElement(tag); e.setAttribute(key, attr); document.head.append(e); }
+    e.setAttribute(tag === 'link' ? 'href' : 'content', val);
+  };
+  function seo({ title, desc, path, image, data, home }) {
+    document.title = home ? title : `${title} · CasualWax`;
+    headTag('meta', 'name', 'description', desc);
+    const url = abs(path);
+    headTag('link', 'rel', 'canonical', url);
+    // one address per language: ?lang= here, /fr/ under Shopify Markets
+    const join = url.includes('?') ? '&' : '?';
+    ['en', 'fr'].forEach((l) => headTag('link', 'hreflang', l, `${url}${join}lang=${l}`));
+    headTag('link', 'hreflang', 'x-default', url);
+    $$('link[hreflang]').forEach((l) => { l.rel = 'alternate'; });
+    headTag('meta', 'property', 'og:site_name', 'CasualWax');
+    headTag('meta', 'property', 'og:type', data && data['@type'] === 'Product' ? 'product' : 'website');
+    headTag('meta', 'property', 'og:title', document.title);
+    headTag('meta', 'property', 'og:description', desc);
+    headTag('meta', 'property', 'og:url', url);
+    headTag('meta', 'property', 'og:locale', state.lang === 'fr' ? 'fr_FR' : 'en_GB');
+    headTag('meta', 'property', 'og:image', abs(image || 'assets/products/hoodie-orbit-1600.webp'));
+    headTag('meta', 'name', 'twitter:card', 'summary_large_image');
+    let ld = $('#cw-ld');
+    if (!data) { if (ld) ld.remove(); return; }
+    if (!ld) { ld = document.createElement('script'); ld.type = 'application/ld+json'; ld.id = 'cw-ld'; document.head.append(ld); }
+    ld.textContent = JSON.stringify({ '@context': 'https://schema.org', ...data });
+  }
+  // the photo of a piece for previews: in this wax if there is one, otherwise in the first wax that has one
+  const photoOf = (piece, waxId) => {
+    const w = [waxOf(waxId), ...WAX].find((x) => x && hasPhoto(x, piece));
+    return w ? `assets/products/${piece}-${w.id}-1600.webp` : null;
+  };
+  const crumbs = (items) => ({ '@type': 'BreadcrumbList', itemListElement: items.map(([name, path], i) => ({ '@type': 'ListItem', position: i + 1, name, item: abs(path) })) });
+  const ORG = { '@type': 'Organization', name: 'CasualWax', url: SITE, logo: abs('assets/products/hoodie-orbit-800.webp'), sameAs: Object.values(D.settings.social || {}).filter(Boolean) };
+
   /* ---------- journal: index, home teaser, article (Shopify: blog / featured-blog / article) ---------- */
   const POSTS = window.CW_POSTS || [];
   const local = (v) => (v && typeof v === 'object' ? (v[state.lang] ?? v.en) : v);
@@ -997,7 +1081,8 @@
     if (!article) return;
     const post = POSTS.find((p) => p.slug === new URLSearchParams(location.search).get('post')) || null;
     if (!post) { $('[data-article-title]', article).textContent = t('journal.missing'); return; }
-    document.title = `${local(post.title)} · CasualWax`;
+    seo({ title: local(post.title), desc: local(post.dek), path: postHref(post),
+      data: { '@type': 'Article', headline: local(post.title), description: local(post.dek), image: abs(post.cover), inLanguage: state.lang, publisher: ORG, mainEntityOfPage: abs(postHref(post)) } });
     const cover = $('[data-article-cover]', article);
     Object.assign(cover, { src: post.cover, alt: local(post.coverAlt) });
     const credit = $('[data-article-credit]', article);
@@ -1025,6 +1110,300 @@
   }
   renderJournal();
   document.addEventListener('click', (e) => { if (e.target.closest('[data-set-lang], [data-action="toggle-lang"]')) renderJournal(); });
+
+  /* ---------- a piece as a card: shop grid and "more pieces" (Shopify: snippets/product-card.liquid) ---------- */
+  const productOf = (id) => PRODUCTS.find((p) => p.id === id);
+  // A picture of the piece in this wax, set on an <img> once decoded; a rendered preview when there is no photo.
+  function dressImg(img, piece, wax, sizes) {
+    img.dataset.product = piece; img.dataset.imagePrint = wax.id;
+    return pictureFor(piece, wax, sizes).then((s) => {
+      if (img.dataset.product !== piece || img.dataset.imagePrint !== wax.id) return;
+      if (s.srcset) { img.sizes = sizes; img.srcset = s.srcset; } else img.removeAttribute('srcset');
+      img.src = s.src;
+      img.toggleAttribute('data-preview', s.preview);
+      applyImageAlts();
+    }).catch(() => {});
+  }
+  function pieceCard(p, wax, headingTag) {
+    const li = el('li', 'shop-card');
+    const a = el('a', 'shop-card-link'); a.href = productHref(p.id, wax.id);
+    const stage = el('span', 'stage');
+    const img = el('img'); Object.assign(img, { width: 800, height: 1000, loading: 'lazy', decoding: 'async', alt: '' });
+    stage.append(img);
+    dressImg(img, p.id, wax, '(min-width: 900px) 30vw, 50vw');
+    const name = el(headingTag, 'shop-card-name', `${t('p.' + p.id)}, ${wax.name}`);
+    a.append(stage, name, el('p', 'shop-card-line', t('p.' + p.id + '.l')), el('p', 'shop-card-price', money(p.prices[state.cur])));
+    li.append(a);
+    return li;
+  }
+
+  // pages written in HTML: their own title and description from the texts
+  const page = document.body.dataset.page;
+  const staticSeo = {
+    home: () => seo({ home: true, title: t('title.home'), desc: t('meta.home'), path: '', data: { '@graph': [ORG, { '@type': 'WebSite', name: 'CasualWax', url: SITE, inLanguage: ['en', 'fr'] }] } }),
+    about: () => seo({ title: t('title.about'), desc: t('meta.about'), path: 'about.html', image: 'assets/tailor-ankara-1600.jpg', data: { '@type': 'AboutPage', name: document.title, about: ORG } }),
+    help: () => seo({ title: t('title.help'), desc: t('meta.help'), path: 'help.html', data: crumbs([[t('title.help'), 'help.html']]) }),
+    journal: () => seo({ title: t('title.journal'), desc: t('meta.journal'), path: 'journal.html', data: { '@type': 'Blog', name: 'CasualWax journal', url: abs('journal.html') } }),
+    cart: () => seo({ title: t('title.cart'), desc: t('meta.shop'), path: 'cart.html' }),
+  };
+  if (staticSeo[page]) { staticSeo[page](); onLocale.push(staticSeo[page]); }
+
+  /* ---------- shop: all pieces or one category, with filters (Shopify: templates/collection.json,
+     storefront filtering for fit and size; the wax is a product option, so it dresses the cards instead of hiding them) ---------- */
+  const shop = $('[data-shop]');
+  if (shop) {
+    const CATS = ['tees', 'hoodies', 'bags', 'sneakers'];
+    const form = $('[data-shop-filters]', shop);
+    const grid = $('[data-shop-grid]', shop);
+    const q = new URLSearchParams(location.search);
+    const f = {
+      c: CATS.includes(q.get('c')) ? q.get('c') : '',
+      fit: ['women', 'men'].includes(q.get('fit')) ? q.get('fit') : '',
+      size: q.get('size') || '',
+      wax: waxOf(q.get('wax')) ? q.get('wax') : state.print,
+      sort: ['low', 'high'].includes(q.get('sort')) ? q.get('sort') : '',
+    };
+    const inCat = () => PRODUCTS.filter((p) => !f.c || p.category === f.c);
+    const option = (value, text) => { const o = el('option', '', text); o.value = value; return o; };
+    function fillSelects() {
+      const sizes = [...new Set(inCat().flatMap((p) => p.sizes || []))];
+      if (f.size && !sizes.includes(f.size)) f.size = '';
+      form.size.replaceChildren(option('', t('f.anySize')), ...sizes.map((v) => option(v, v)));
+      form.wax.replaceChildren(...WAX.map((w) => option(w.id, w.name)));
+      form.fit.value = f.fit; form.size.value = f.size; form.wax.value = f.wax; form.sort.value = f.sort;
+      $('[data-size-field]', shop).hidden = sizes.length === 0;
+    }
+    function draw() {
+      const wax = waxOf(f.wax);
+      let list = inCat().filter((p) => (!f.fit || (p.fit || 'unisex') === f.fit || (p.fit || 'unisex') === 'unisex') && (!f.size || (p.sizes || []).includes(f.size)));
+      if (f.sort) list = [...list].sort((a, b) => (a.prices[state.cur] - b.prices[state.cur]) * (f.sort === 'low' ? 1 : -1));
+      grid.replaceChildren(...list.map((p) => pieceCard(p, wax, 'h2')));
+      $('[data-shop-count]', shop).textContent = list.length === 1 ? t('shop.count1') : tf('shop.countN', { n: list.length });
+      $('[data-shop-empty]', shop).hidden = list.length > 0;
+      const name = f.c ? t('col.' + f.c) : '';
+      $('[data-shop-title]', shop).textContent = f.c ? name : t('shop.page');
+      $('[data-shop-lede]', shop).textContent = f.c ? t('col.' + f.c + '.d') : t('shop.lede');
+      // the category links keep the other filters
+      $$('[data-cat]', shop).forEach((a) => {
+        const u = new URLSearchParams(); if (a.dataset.cat) u.set('c', a.dataset.cat);
+        ['fit', 'size', 'sort'].forEach((k) => { if (f[k]) u.set(k, f[k]); });
+        a.href = 'shop.html' + (u.size ? '?' + u : '');
+        if (a.dataset.cat === f.c) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+      });
+      const u = new URLSearchParams(); ['c', 'fit', 'size', 'sort'].forEach((k) => { if (f[k]) u.set(k, f[k]); });
+      if (f.wax !== state.print) u.set('wax', f.wax);
+      history.replaceState(null, '', 'shop.html' + (u.size ? '?' + u : ''));
+      const path = f.c ? `shop.html?c=${f.c}` : 'shop.html';
+      seo({
+        title: f.c ? tf('title.col', { col: name }) : t('title.shop'),
+        desc: f.c ? tf('meta.col', { col: name }) : t('meta.shop'),
+        path, image: photoOf(list[0] ? list[0].id : 'hoodie', f.wax),
+        data: { '@graph': [
+          { '@type': 'CollectionPage', name: f.c ? name : t('shop.page'), url: abs(path),
+            mainEntity: { '@type': 'ItemList', itemListElement: list.map((p, i) => ({ '@type': 'ListItem', position: i + 1, url: abs(productHref(p.id)) })) } },
+          crumbs([[t('shop.page'), 'shop.html'], ...(f.c ? [[name, path]] : [])]),
+        ] },
+      });
+    }
+    form.addEventListener('change', (e) => { f[e.target.name] = e.target.value; draw(); });
+    form.addEventListener('submit', (e) => e.preventDefault());
+    form.addEventListener('reset', (e) => { e.preventDefault(); Object.assign(f, { fit: '', size: '', wax: state.print, sort: '' }); fillSelects(); draw(); });
+    fillSelects(); draw();
+    onLocale.push(() => { fillSelects(); draw(); });
+  }
+
+  /* ---------- product page: one piece, its waxes, sizes, views and details (Shopify: templates/product.json;
+     wax and size are the two product options, the views are the product media) ---------- */
+  const pdp = $('[data-pdp]');
+  if (pdp) {
+    const q = new URLSearchParams(location.search);
+    const p = productOf(q.get('piece'));
+    if (!p) {
+      $('[data-pdp-name]', pdp).textContent = t('pdp.missing');
+      $('[data-pdp-body]', pdp).hidden = true;
+    } else {
+      const s = { wax: waxOf(q.get('wax')) ? q.get('wax') : state.print, view: 0 };
+      const form = $('[data-pdp-form]', pdp);
+      const main = $('[data-pdp-img]', pdp);
+      const viewsEl = $('[data-pdp-views]', pdp);
+      const VIEWS = [p.model, ...(p.worn || [])];
+      // view 0 is the product shot (a photo when this wax has one); the others are worn shots drawn in the wax
+      const viewSrc = (n) => (n === 0 ? pictureFor(p.id, waxOf(s.wax), '(min-width: 900px) 45vw, 100vw') : preview(VIEWS[n], waxOf(s.wax)).then((src) => ({ src, srcset: '', preview: true })));
+      let showing = 0;
+      async function show() {
+        const r = ++showing;
+        main.closest('.stage').classList.add('is-switching');
+        try {
+          const pic = await viewSrc(s.view);
+          if (r !== showing) return;
+          if (pic.srcset) { main.sizes = '(min-width: 900px) 45vw, 100vw'; main.srcset = pic.srcset; } else main.removeAttribute('srcset');
+          main.src = pic.src;
+          main.dataset.product = p.id; main.dataset.imagePrint = s.wax;
+          main.toggleAttribute('data-preview', pic.preview);
+          main.toggleAttribute('data-worn', s.view > 0);
+          main.width = s.view > 0 ? 1024 : 800; main.height = s.view > 0 ? 1536 : 1000;
+          await main.decode().catch(() => {});
+          applyImageAlts();
+        } catch { /* keep the current picture */ }
+        if (r === showing) main.closest('.stage').classList.remove('is-switching');
+      }
+      function drawViews() {
+        viewsEl.replaceChildren(...VIEWS.map((src, n) => {
+          const b = el('button', 'stage pdp-view');
+          b.type = 'button';
+          b.setAttribute('aria-pressed', String(n === s.view));
+          b.setAttribute('aria-label', tf('pdp.view', { n: n + 1 }));
+          const img = el('img'); Object.assign(img, { alt: '', width: n ? 1024 : 800, height: n ? 1536 : 1000, decoding: 'async' });
+          viewSrc(n).then((pic) => { img.src = pic.src; }).catch(() => b.remove());
+          b.append(img);
+          b.addEventListener('click', () => { s.view = n; $$('.pdp-view', viewsEl).forEach((x) => x.setAttribute('aria-pressed', String(x === b))); show(); });
+          return b;
+        }));
+        viewsEl.hidden = VIEWS.length < 2;
+      }
+      // the wax swatches and the sizes are real radio buttons: arrow keys and forms work as everywhere else
+      const radio = (name, value, checked, label, child) => {
+        const l = el('label', 'pdp-choice');
+        const i = el('input'); Object.assign(i, { type: 'radio', name, value, checked });
+        l.append(i, child || el('span', '', label));
+        if (child) l.title = label;
+        if (child) i.setAttribute('aria-label', label);
+        return l;
+      };
+      $('[data-pdp-waxes]', pdp).replaceChildren(...WAX.map((w) => {
+        const img = el('img'); Object.assign(img, { src: w.tile, alt: '', width: 44, height: 44, decoding: 'async' });
+        return radio('wax', w.id, w.id === s.wax, w.name, img);
+      }));
+      if (p.sizes) $('[data-pdp-sizes]', pdp).replaceChildren(...p.sizes.map((v) => radio('size', v, v === p.defaultSize, v)));
+      $('[data-pdp-size-box]', pdp).hidden = !p.sizes;
+      $('[data-pdp-one-size]', pdp).hidden = !!p.sizes;
+
+      // only the tees and hoodies are cut from West African cotton (what the site states); bags and sneakers say less
+      const westAfrican = ['tees', 'hoodies'].includes(p.category);
+      $('[data-pdp-cotton]', pdp).hidden = !westAfrican;
+      function text() {
+        const wax = waxOf(s.wax);
+        $('[data-pdp-name]', pdp).textContent = t('p.' + p.id);
+        $$('[data-pdp-wax]', pdp).forEach((e) => { e.textContent = wax.name; });
+        $('[data-pdp-price]', pdp).textContent = money(p.prices[state.cur]);
+        $('[data-pdp-line]', pdp).textContent = t('p.' + p.id + '.l');
+        $('[data-pdp-panel]', pdp).textContent = tf('pdp.panel.d', { wax: wax.name });
+        $('[data-pdp-studio]', pdp).href = `studio.html?piece=${p.id}&wax=${wax.id}`;
+        const cat = $('[data-pdp-cat]', pdp); cat.href = `shop.html?c=${p.category}`; cat.textContent = t('col.' + p.category);
+        $('[data-pdp-crumb]', pdp).textContent = `${t('p.' + p.id)}, ${wax.name}`;
+        const url = new URL(location.href); url.searchParams.set('piece', p.id); url.searchParams.set('wax', wax.id); history.replaceState(null, '', url);
+        const name = `${t('p.' + p.id)}, ${wax.name}`;
+        seo({
+          // one address per piece, whatever the wax (Shopify: variants share the product URL)
+          title: name, desc: tf(westAfrican ? 'meta.product' : 'meta.productOther', { name: t('p.' + p.id), wax: wax.name }), path: productHref(p.id), image: photoOf(p.id, wax.id),
+          data: { '@graph': [
+            { '@type': 'Product', name, sku: `${p.id}-${wax.id}`, brand: { '@type': 'Brand', name: 'CasualWax' },
+              description: `${t('p.' + p.id + '.l')} ${tf('pdp.panel.d', { wax: wax.name })}`, image: abs(photoOf(p.id, wax.id) || 'assets/products/hoodie-orbit-1600.webp'),
+              ...(westAfrican ? { material: t('pdp.cotton.d') } : {}), category: t('col.' + p.category),
+              // the live shop takes price, currency and stock from Shopify Markets and inventory
+              offers: { '@type': 'Offer', price: p.prices[state.cur], priceCurrency: state.cur, availability: 'https://schema.org/InStock', url: abs(productHref(p.id)) } },
+            crumbs([[t('shop.page'), 'shop.html'], [t('col.' + p.category), `shop.html?c=${p.category}`], [t('p.' + p.id), productHref(p.id)]]),
+          ] },
+        });
+      }
+      function more() {
+        const others = PRODUCTS.filter((x) => x !== p);
+        const same = others.filter((x) => x.category === p.category);
+        $('[data-pdp-more]', pdp.parentElement).replaceChildren(...[...same, ...others.filter((x) => !same.includes(x))].slice(0, 3).map((x) => pieceCard(x, waxOf(s.wax), 'h3')));
+      }
+      form.addEventListener('change', (e) => {
+        if (e.target.name === 'wax') { s.wax = e.target.value; text(); show(); drawViews(); more(); }
+        if (e.target.name === 'size') $('[data-pdp-msg]', pdp).textContent = '';
+      });
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const size = p.sizes ? (form.size.value || '') : '';
+        if (p.sizes && !size) { $('[data-pdp-msg]', pdp).textContent = t('pdp.pickSize'); return; }
+        added(p.id, s.wax, size, $('[data-pdp-add]', pdp));
+      });
+      text(); show(); drawViews(); more();
+      onLocale.push(() => { text(); more(); });
+    }
+  }
+
+  /* ---------- cart page (Shopify: templates/cart.json; the checkout button posts to /checkout) ---------- */
+  const cartPage = $('[data-cartpage]');
+  if (cartPage) {
+    const lines = $('[data-cart-lines]', cartPage);
+    function drawCart() {
+      cartPage.classList.toggle('is-empty', cart.length === 0);
+      $('[data-cart-empty]', cartPage).hidden = cart.length > 0;
+      $('[data-cart-full]', cartPage).hidden = cart.length === 0;
+      lines.replaceChildren(...cart.map((l, i) => {
+        const wax = waxOf(l.wax);
+        const li = el('li', 'cart-line');
+        const pic = el('a', 'stage cart-pic'); pic.href = productHref(l.piece, l.wax); pic.tabIndex = -1; pic.setAttribute('aria-hidden', 'true');
+        const img = el('img'); Object.assign(img, { width: 800, height: 1000, alt: '', decoding: 'async' });
+        pic.append(img); dressImg(img, l.piece, wax, '120px');
+        const info = el('div', 'cart-info');
+        const name = el('h2', 'cart-name'); const a = el('a', 'link', `${t('p.' + l.piece)}, ${wax.name}`); a.href = productHref(l.piece, l.wax); name.append(a);
+        info.append(name, el('p', 'cart-meta', tf('cart.line', { wax: wax.name, size: l.size || t('onesize') })), el('p', 'cart-unit', money(PRICES[l.piece][state.cur])));
+        const qty = el('div', 'cart-qty'); qty.setAttribute('role', 'group'); qty.setAttribute('aria-label', `${t('cart.qty')}: ${t('p.' + l.piece)}, ${wax.name}`);
+        const less = el('button', '', '−'); less.type = 'button'; less.setAttribute('aria-label', t('cart.less')); less.dataset.step = '-1'; less.dataset.line = i;
+        const n = el('output', '', String(l.qty)); n.setAttribute('aria-live', 'polite');
+        const plus = el('button', '', '+'); plus.type = 'button'; plus.setAttribute('aria-label', t('cart.more')); plus.dataset.step = '1'; plus.dataset.line = i;
+        plus.disabled = l.qty >= 99;
+        qty.append(less, n, plus);
+        const rm = el('button', 'link cart-remove', t('cart.remove')); rm.type = 'button'; rm.dataset.remove = i;
+        li.append(pic, info, qty, el('p', 'cart-total', money(PRICES[l.piece][state.cur] * l.qty)), rm);
+        return li;
+      }));
+      $('[data-cart-subtotal]', cartPage).textContent = money(cartTotal());
+      // an empty cart is not a dead end: the pieces, one click from their page
+      const ideas = $('[data-cart-ideas]', cartPage);
+      if (!cart.length) ideas.replaceChildren(...PRODUCTS.map((p) => pieceCard(p, waxOf(state.print), 'h2')));
+      else ideas.replaceChildren();
+    }
+    lines.addEventListener('click', (e) => {
+      const step = e.target.closest('[data-step]'); const rm = e.target.closest('[data-remove]');
+      if (step) {
+        const i = +step.dataset.line; const l = cart[i];
+        l.qty = Math.max(0, Math.min(99, l.qty + +step.dataset.step));
+        if (!l.qty) cart.splice(i, 1);
+        saveCart();
+        // keep the keyboard where it was
+        const again = $(`[data-line="${i}"][data-step="${step.dataset.step}"]`, lines) || $('[data-step]', lines) || $('[data-cart-empty] a', cartPage);
+        if (again) again.focus();
+      }
+      if (rm) {
+        cart.splice(+rm.dataset.remove, 1); saveCart();
+        const next = $('[data-remove]', lines) || $('[data-cart-empty] a', cartPage); if (next) next.focus();
+      }
+    });
+    $('[data-cart-checkout]', cartPage).addEventListener('click', (e) => { e.preventDefault(); $('[data-cart-proto]', cartPage).hidden = false; });
+    cartChanged.push(drawCart);
+    onLocale.push(drawCart);
+    drawCart();
+  }
+
+  /* ---------- contact form (Shopify: the contact form posts to the shop's address; here it opens an email) ---------- */
+  const contact = $('[data-contact]');
+  if (contact) {
+    const msg = $('[data-contact-msg]', contact);
+    const to = D.settings.contactEmail || '';
+    const note = () => { $('[data-contact-to]').hidden = !!to; };
+    note();
+    contact.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const email = contact.email; const body = contact.message;
+      if (!email.value || !email.checkValidity() || !body.value.trim()) {
+        msg.textContent = t('help.bad');
+        (!email.value || !email.checkValidity() ? email : body).setAttribute('aria-invalid', 'true');
+        (!email.value || !email.checkValidity() ? email : body).focus();
+        return;
+      }
+      email.removeAttribute('aria-invalid'); body.removeAttribute('aria-invalid');
+      if (!to) { msg.textContent = t('help.noEmail'); return; }
+      const subject = `CasualWax: ${contact.name.value || email.value}`;
+      location.href = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(`${body.value}\n\n${contact.name.value}\n${email.value}`)}`;
+      msg.textContent = t('help.sent');
+    });
+  }
 
   /* ---------- social accounts (footer), set in the admin ---------- */
   const SOCIAL = D.settings.social || {};
