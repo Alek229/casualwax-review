@@ -424,6 +424,8 @@
       thumbs.set(p.id, i);
       radio(pieceBox, 'heroPiece', { id: p.id, text: t('p.' + p.id), i18n: 'p.' + p.id }, i);
     });
+    // a thumbnail changes only once its new picture is decoded, so it never shows an empty frame
+    const dressThumb = (id, src) => { const i = new Image(); i.src = src; i.decode().catch(() => {}).then(() => { thumbs.get(id).src = src; }); };
     const check = (box, attr, id) => $$('[role="radio"]', box).forEach((b) => {
       const on = b.dataset[attr] === id; b.setAttribute('aria-checked', String(on)); b.tabIndex = on ? 0 : -1;
     });
@@ -471,7 +473,7 @@
     async function setHeroWax(id, instant) {
       const wax = waxOf(id); if (!wax) return;
       H.wax = id; marks(); dressPiece(instant);
-      PRODUCTS.forEach((p) => pictureFor(p.id, wax, '52px').then((s) => { if (H.wax === id) thumbs.get(p.id).src = s.src; }).catch(() => {}));
+      PRODUCTS.forEach((p) => pictureFor(p.id, wax, '52px').then((s) => { if (H.wax === id) dressThumb(p.id, s.src); }).catch(() => {}));
       try {
         const tn = await tone(wax);
         if (H.wax !== id) return;
@@ -534,24 +536,31 @@
         cur.classList.add('is-going'); next.classList.remove('is-coming');
         setTimeout(() => cur.remove(), 360);
       }, 420);
+      if (auto && ++beat % 3 === 0) { clearTimeout(pieceTimer); pieceTimer = setTimeout(() => { if (auto) tick(); }, 760); }
     }
     resetWord();
 
-    // It plays by itself (a new piece every few seconds, a new wax after each round) until the
-    // visitor picks something; it rests while hovered, focused, off screen or in a hidden tab.
-    let timer = null; let held = false; let seen = true; let round = 0; let taken = false;
+    // It plays by itself until the visitor picks something, on the word's clock: every third word,
+    // once that word has landed (420 + 340ms), the piece changes; after each round of pieces, the wax.
+    // While the visitor is on the picture or the picker, or has focus in the hero, the piece and the
+    // word both rest, so nothing moves under the eye that is choosing. Off screen or in a hidden tab, all rest.
+    let held = false; let seen = true; let round = 0; let taken = false; let auto = false; let beat = 0; let pieceTimer = null;
     const tick = () => {
       const ids = PRODUCTS.map((p) => p.id); const n = (ids.indexOf(H.piece) + 1) % ids.length;
       if (n === 0 && ++round) { const w = WAX[(WAX.findIndex((x) => x.id === H.wax) + 1) % WAX.length]; H.piece = ids[0]; setHeroWax(w.id); }
       else setHeroPiece(ids[n]);
     };
-    const run = () => { const go = !reduced && !taken && !held && seen && !document.hidden; if (go && !timer) timer = setInterval(tick, 3400); if (!go && timer) { clearInterval(timer); timer = null; }
-      // the words keep passing after the visitor takes over; they rest only off screen
-      const say = !reduced && seen && !document.hidden;
+    const run = () => {
+      auto = !reduced && !taken && !held && seen && !document.hidden;
+      if (!auto) clearTimeout(pieceTimer);
+      // the words keep passing after the visitor takes over; they rest while the visitor is choosing
+      const say = !reduced && !held && seen && !document.hidden;
       if (say && !wordTimer) wordTimer = setInterval(nextWord, 1400); if (!say && wordTimer) { clearInterval(wordTimer); wordTimer = null; } };
     const take = () => { taken = true; run(); };
-    fig.addEventListener('pointerenter', () => { held = true; run(); });
-    fig.addEventListener('pointerleave', () => { held = false; run(); });
+    [fig, $('.hero-piece', hero)].forEach((el) => {
+      el.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') { held = true; run(); } });
+      el.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') { held = false; run(); } });
+    });
     hero.addEventListener('focusin', () => { held = true; run(); });
     hero.addEventListener('focusout', () => { held = false; run(); });
     document.addEventListener('visibilitychange', run);
@@ -600,7 +609,7 @@
 
     label();
     const first = waxOf(H.wax);
-    PRODUCTS.forEach((p) => pictureFor(p.id, first, '52px').then((s) => { thumbs.get(p.id).src = s.src; }).catch(() => {}));
+    PRODUCTS.forEach((p) => pictureFor(p.id, first, '52px').then((s) => dressThumb(p.id, s.src)).catch(() => {}));
     tone(first).then((tn) => sew(first, tn, !reduced)).catch(() => {});   // the first band is sewn in on arrival
     if (H.piece !== 'hoodie' || !hasPhoto(first, H.piece)) dressPiece(true);
     align();
@@ -671,7 +680,8 @@
     ['.site-footer', '.footer-name, .footer-places li, .footer-links > div'],
   ];
   // The hero picture is not part of the entrance: it is the first thing to see, so it is there from the first paint.
-  $$('.hero-half, .hero-wax, .hero-foot > *, .hero-piece > *').forEach((el, n) => { el.setAttribute('data-rise', ''); el.style.setProperty('--i', n); });
+  // The sentence rises first, then the words beside the piece, then the picker, about 60ms apart.
+  $$('.hero-half, .hero-foot > *, .hero-piece > *').forEach((el, n) => { el.setAttribute('data-rise', ''); el.style.setProperty('--i', (n * 2 / 3).toFixed(2)); });
   if (!reduced && 'IntersectionObserver' in window) {
     const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); } }), { rootMargin: '0px 0px -10% 0px', threshold: 0.05 });
     groups.forEach(([scope, parts]) => $$(scope).forEach((s) => $$(parts, s).forEach((el, n) => {

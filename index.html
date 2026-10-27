@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=TikTok+Sans:wdth,wght@75..150,300..900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20261026f">
+<link rel="stylesheet" href="styles.css?v=20261027b">
 <script>document.documentElement.classList.add('js')</script>
 </head>
 <body>
@@ -121,8 +121,8 @@
 <main id="main">
 
 <!-- ===================== sections/hero-wax.liquid ===================== -->
-<!-- The hero is a piece of cloth: a solid field in the wax's own colour, one sewn band of the print
-     running across it, and the piece wearing that wax. The visitor picks the wax and the piece. -->
+<!-- The hero is a piece of cloth: the dark cotton ground, one sewn band of the print running across
+     it, and the piece wearing that wax. The visitor picks the wax and the piece in one block. -->
 <section class="hero" id="top" data-shopify-section="hero-wax" aria-labelledby="hero-title" data-hero>
   <h1 id="hero-title" class="hero-title">
     <span class="hero-half hero-half--a" data-i18n="hero.a">Wax is our</span>
@@ -134,10 +134,9 @@
   <figure class="hero-stage" data-hero-stage>
     <a class="stage" href="studio.html?piece=hoodie&amp;wax=orbit" data-hero-link>
       <img src="assets/products/hoodie-orbit-800.webp" srcset="assets/products/hoodie-orbit-800.webp 800w, assets/products/hoodie-orbit-1600.webp 1600w" sizes="(min-width: 900px) 30vw, 66vw" width="800" height="1000" alt="Solid black hoodie with a sewn wax chest panel, front view. AI-generated product concept." fetchpriority="high" decoding="async" data-product="hoodie" data-image-print="orbit" data-hero-img>
-      <span class="stage-tag" data-i18n="wax.preview">Preview</span>
     </a>
+    <figcaption class="hero-note" data-i18n="hero.note">Concept render</figcaption>
   </figure>
-  <div class="hero-wax" role="radiogroup" aria-label="Choose the wax" data-i18n-label="hero.waxes" data-hero-wax></div>
   <div class="hero-foot">
     <p class="hero-lede" data-i18n="hero.lede">Solid cotton. Sewn wax. T-shirts, hoodies, bags and sneakers, made in Africa, with original wax accents and 100% West African cotton.</p>
     <a class="button" href="#shop" data-i18n="hero.cta">Shop the collection</a>
@@ -145,7 +144,13 @@
   <div class="hero-piece">
     <p class="hero-piece-name"><span data-hero-name data-i18n="p.hoodie">Hoodie</span>, <span data-hero-print>Orbit</span></p>
     <p class="hero-piece-price" data-hero-price data-price="hoodie">€95</p>
-    <div class="hero-pieces" role="radiogroup" aria-label="Choose the piece" data-i18n-label="hero.pieces" data-hero-pieces></div>
+    <!-- one picker: what each row changes is written beside it -->
+    <div class="hero-pick">
+      <span class="hero-pick-label" aria-hidden="true" data-i18n="hero.waxLabel">Wax</span>
+      <div class="hero-wax" role="radiogroup" aria-label="Choose the wax" data-i18n-label="hero.waxes" data-hero-wax></div>
+      <span class="hero-pick-label" aria-hidden="true" data-i18n="hero.pieceLabel">Piece</span>
+      <div class="hero-pieces" role="radiogroup" aria-label="Choose the piece" data-i18n-label="hero.pieces" data-hero-pieces></div>
+    </div>
     <a class="link hero-piece-link" href="studio.html?piece=hoodie&amp;wax=orbit" data-hero-link data-i18n="hero.try">Try it in the studio</a>
   </div>
 </section>
@@ -483,7 +488,7 @@
 </div>
 
 <script src="wax-render.js?v=20261025" defer></script>
-<script src="site-data.js?v=20261026-082503" defer></script>
-<script src="main.js?v=20261026f" defer></script>
+<script src="site-data.js?v=20261027-103127" defer></script>
+<script src="main.js?v=20261027a" defer></script>
 </body>
 </html>

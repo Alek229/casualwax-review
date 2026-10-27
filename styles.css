@@ -132,15 +132,17 @@ select { appearance: none; -webkit-appearance: none; background: var(--surface) 
 
 /* ---------- hero: a piece of cloth. The solid dark ground is the cotton, one band of the chosen
    print is sewn across it, and the piece in the middle wears the same wax. ---------- */
-/* The h1 is a subgrid: its first half in the first row, its second half in the third, the piece between. */
+/* The h1 is a subgrid: its first half in the first row, its second half in the third, the piece between.
+   The whole sentence fits the first screen: the type is capped by the screen's height as well as its width. */
 .hero { --hx: 9.4vw; --sw: 64vw; --mid: calc(var(--sw) * 1.25);
-  position: relative; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto var(--mid) auto auto auto auto;
+  position: relative; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto var(--mid) auto auto auto;
   row-gap: 1rem; padding: 1.25rem var(--margin) 2.75rem; overflow: clip; }
 .hero-title { grid-row: 1 / 4; grid-column: 1 / -1; display: grid; grid-template-rows: subgrid; grid-template-columns: subgrid; }
 .hero-half { display: block; grid-column: 1 / -1; font-size: var(--hx); line-height: 0.9; font-stretch: 125%; white-space: nowrap; position: relative; z-index: 1; will-change: transform; }
 .hero-half--a { grid-row: 1; }
 .hero-half--b { grid-row: 3; justify-self: end; text-align: right; }
-/* the last word: a saffron marker swipe crosses it out, then the next word rises into its place */
+/* the last word: a saffron marker swipe crosses it out, then the next word rises into its place.
+   It is the lead movement of the hero; everything else waits for it (see the clock in main.js). */
 .hero-word { display: inline-grid; justify-items: end; }
 .hero-word-run { grid-area: 1 / 1; transition: opacity 200ms var(--ease-out), translate 340ms var(--ease-out); }
 .hero-word-text { position: relative; }
@@ -149,10 +151,11 @@ select { appearance: none; -webkit-appearance: none; background: var(--surface) 
 .hero-word-strike path { fill: none; stroke: var(--accent); stroke-width: 5.2; stroke-linecap: round; stroke-linejoin: round;
   filter: url(#cw-marker); stroke-dasharray: 1.02; stroke-dashoffset: 1.02; }
 .hero-word-run.is-struck .hero-word-strike path { stroke-dashoffset: 0; transition: stroke-dashoffset 220ms cubic-bezier(0.6, 0, 0.3, 1); }
+/* the next word comes up from just below; the struck one leaves upward, faster than it came */
 .hero-word-run.is-coming { opacity: 0; translate: 0 0.35em; transition: none; }
-.hero-word-run.is-going { opacity: 0; translate: 0 -0.35em; }
+.hero-word-run.is-going { opacity: 0; translate: 0 -0.25em; transition: opacity 160ms var(--ease-out), translate 220ms var(--ease-out); }
 
-/* the sewn band: the print drifting across the ground */
+/* the sewn band: the print drifting across the ground, slower than anything else in the hero */
 .hero-band { grid-row: 2; grid-column: 1 / -1; align-self: start; position: relative; z-index: 0; overflow: hidden;
   margin-inline: calc(var(--margin) * -1); margin-top: calc(var(--mid) * 0.25); height: calc(var(--mid) * 0.24);
   transition: translate 700ms var(--ease-in-out); }
@@ -170,43 +173,48 @@ select { appearance: none; -webkit-appearance: none; background: var(--surface) 
 .hero-stage img.is-entering { opacity: 0; transition: none; }
 .hero-stage[aria-busy="true"] .stage { cursor: progress; }
 @media (hover: hover) and (pointer: fine) { .hero-stage .stage:hover img { transform: scale(1.035); } }
+/* the picture is a render: said in plain words on the studio ground, not on a sticker */
+.hero-note { position: absolute; left: 0.75rem; bottom: 0.55rem; z-index: 1; font-size: var(--step-small); line-height: 1.3; color: var(--paper-muted); pointer-events: none; }
 
-/* the wax swatches, and the pieces: square tiles, the chosen one framed in ivory */
-.hero-wax { grid-row: 4; grid-column: 1; display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; }
-.hero-wax button, .hero-pieces button { position: relative; flex: none; outline: 3px solid transparent; outline-offset: 3px; transition: outline-color var(--t-hover) ease, transform var(--t-press) var(--ease-out); }
-.hero-wax button { width: 2.75rem; height: 2.75rem; }
-.hero-wax img { width: 100%; height: 100%; object-fit: cover; background: none; }
-.hero-wax button[aria-checked="true"], .hero-pieces button[aria-checked="true"] { outline-color: var(--ink); }
-.hero-wax button:active, .hero-pieces button:active { transform: scale(0.94); }
-@media (hover: hover) and (pointer: fine) { .hero-wax button:hover, .hero-pieces button:hover { transform: translateY(-3px); } }
-.hero-wax :focus-visible, .hero-pieces :focus-visible { outline-color: var(--accent); }
-
-.hero-piece { grid-row: 6; grid-column: 1; display: grid; gap: 0.35rem; justify-items: start; padding-top: 0.75rem; }
+/* the picker: name and price, then the wax and the piece, each row named beside it */
+.hero-piece { grid-row: 5; grid-column: 1; display: grid; gap: 0.25rem; justify-items: start; padding-top: 0.75rem; }
 .hero-piece-name { font-size: var(--step-lead); font-weight: 650; line-height: 1.2; }
-.hero-piece-price { font-size: var(--step-lead); font-variant-numeric: tabular-nums; color: var(--muted); }
-.hero-pieces { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.6rem; width: 100%; }
-.hero-pieces button { width: min(3.25rem, calc((100% - 2.5rem) / 6)); aspect-ratio: 4 / 5; background: var(--stage); }
+.hero-piece-price { font-size: var(--step-lead); line-height: 1.2; font-variant-numeric: tabular-nums; }
+.hero-pick { display: grid; grid-template-columns: auto auto; align-items: center; gap: 0.75rem 1rem; margin-top: 0.9rem; }
+.hero-pick-label { font-size: var(--step-small); color: var(--muted); }
+.hero-wax, .hero-pieces { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.hero-wax button, .hero-pieces button { position: relative; flex: none; width: 2.75rem; outline: 3px solid transparent; outline-offset: 3px;
+  transition: outline-color var(--t-hover) ease, transform var(--t-press) var(--ease-out); }
+.hero-wax button { height: 2.75rem; }
+.hero-pieces button { aspect-ratio: 4 / 5; background: var(--stage); }
+.hero-wax img { width: 100%; height: 100%; object-fit: cover; background: none; }
 .hero-pieces img { width: 100%; height: 100%; object-fit: contain; background: var(--stage); }
-.hero-piece-link { margin-top: 0.35rem; font-weight: 600; text-decoration-color: currentColor; }
+.hero-wax button[aria-checked="true"], .hero-pieces button[aria-checked="true"] { outline-color: var(--ink); }
+.hero-wax button:active, .hero-pieces button:active { transform: scale(0.95); }
+@media (hover: hover) and (pointer: fine) {
+  .hero-wax button:hover, .hero-pieces button:hover { transform: translateY(-2px); }
+  .hero-wax button:hover:not([aria-checked="true"]), .hero-pieces button:hover:not([aria-checked="true"]) { outline-color: rgb(239 237 233 / 0.35); }
+}
+.hero-wax :focus-visible, .hero-pieces :focus-visible { outline-color: var(--accent); }
+.hero-piece-link { margin-top: 0.6rem; font-weight: 600; text-decoration-color: currentColor; }
 
-.hero-foot { grid-row: 5; grid-column: 1; display: grid; gap: 1.25rem; justify-items: start; padding-top: 0.75rem; }
+.hero-foot { grid-row: 4; grid-column: 1; display: grid; gap: 1.25rem; justify-items: start; padding-top: 0.75rem; }
 .hero-lede { font-size: var(--step-body); max-width: 34ch; }
-html:not(.js) .hero-wax, html:not(.js) .hero-pieces { display: none; }
+html:not(.js) .hero-pick { display: none; }
 
 @media (min-width: 900px) {
-  /* rows: first half, the piece across the band, the swatches, second half */
-  .hero { --hx: var(--step-display);
-    --mid: max(21rem, calc(100svh - var(--header) - 3rem - 2 * var(--hx) * 0.9 - 2.75rem - 3 * 1rem));
-    --sw: calc(var(--mid) * 0.8);
-    min-height: calc(100svh - var(--header)); grid-template-columns: minmax(0, 1fr) var(--sw) minmax(0, 1fr); column-gap: clamp(1.5rem, 3vw, 3.5rem);
-    grid-template-rows: auto var(--mid) auto auto; padding: 1.5rem var(--margin) 1.5rem; }
-  .hero-title { grid-row: 1 / 5; }
-  .hero-half--b { grid-row: 4; }
+  /* rows: first half; the piece across the band, the words left and the picker right; second half */
+  .hero { --hx: min(var(--step-display), 12.5svh);
+    --mid: max(19rem, calc(100svh - var(--header) - 3rem - 1.8 * var(--hx) - 2rem));
+    --sw: min(calc(var(--mid) * 0.8), 34vw);
+    grid-template-columns: minmax(0, 1fr) var(--sw) minmax(0, 1fr); column-gap: clamp(1.5rem, 3vw, 3.5rem);
+    grid-template-rows: auto var(--mid) auto; padding: 1.5rem var(--margin) 1.5rem; }
   .hero-stage { grid-column: 2; }
-  .hero-wax { grid-row: 3; grid-column: 2; }
   .hero-foot { grid-row: 2; grid-column: 1; align-self: end; padding: 0; }
   .hero-piece { grid-row: 2; grid-column: 3; align-self: end; justify-items: end; text-align: right; padding: 0; }
-  .hero-pieces { justify-content: flex-end; }
+  .hero-pick { justify-content: end; }
+  /* the two rows start on one edge, each beside its name, like the lines of a label */
+  .hero-pick-label { justify-self: end; }
 }
 
 /* ---------- collections: sticky picture, active list ---------- */
